@@ -3,8 +3,9 @@ from html.parser import HTMLParser
 from tkinter import messagebox
 
 # Define HTML5 void elements
-VOID_ELEMENTS = {"area", "base", "br", "col", "embed", "hr", "img", "input", 
+VOID_ELEMENTS = {"area", "base", "br", "col", "embed", "hr", "img", "input",
                  "link", "meta", "param", "source", "track", "wbr"}
+
 
 class Node:
     def __init__(self, tag=None, attrs=None, data=None, is_comment=False, is_doctype=False):
@@ -18,48 +19,69 @@ class Node:
     def add_child(self, node):
         self.children.append(node)
 
+
 class HTMLTreeBuilder(HTMLParser):
     def __init__(self):
         super().__init__()
         self.root = Node(tag="__ROOT__")
         self.stack = [self.root]
+        self.errors = []
 
     def handle_decl(self, decl):
-        # Handle DOCTYPE declarations
-        # Store it as a special node
-        node = Node(is_doctype=True, data=decl.upper())
-        self.stack[-1].add_child(node)
+        try:
+            node = Node(is_doctype=True, data=decl.upper())
+            self.stack[-1].add_child(node)
+        except Exception as e:
+            self.errors.append(f"Error handling DOCTYPE: {e}")
 
     def handle_starttag(self, tag, attrs):
-        # If it's a void element, add and don't push to stack
-        if tag.lower() in VOID_ELEMENTS:
-            node = Node(tag=tag, attrs=dict(attrs))
-            self.stack[-1].add_child(node)
-        else:
-            node = Node(tag=tag, attrs=dict(attrs))
-            self.stack[-1].add_child(node)
-            self.stack.append(node)
+        try:
+            # If it's a void element, add and don't push to stack
+            if tag.lower() in VOID_ELEMENTS:
+                node = Node(tag=tag, attrs=dict(attrs))
+                self.stack[-1].add_child(node)
+            else:
+                node = Node(tag=tag, attrs=dict(attrs))
+                self.stack[-1].add_child(node)
+                self.stack.append(node)
+        except Exception as e:
+            self.errors.append(f"Error processing start tag <{tag}>: {e}")
 
     def handle_endtag(self, tag):
-        # Pop only if the tag is on the stack and not a void element
-        if tag.lower() not in VOID_ELEMENTS and len(self.stack) > 1:
-            # Pop until we find a matching start tag
-            # (For well-formed HTML, it should be the top)
-            if self.stack[-1].tag == tag:
-                self.stack.pop()
+        try:
+            if tag.lower() not in VOID_ELEMENTS and len(self.stack) > 1:
+                # Pop until we find a matching start tag
+                if self.stack[-1].tag == tag:
+                    self.stack.pop()
+                else:
+                    self.errors.append(f"Warning: Unmatched end tag </{tag}>")
+        except Exception as e:
+            self.errors.append(f"Error processing end tag </{tag}>: {e}")
 
     def handle_data(self, data):
-        stripped = data.strip()
-        if stripped:
-            node = Node(data=stripped)
-            self.stack[-1].add_child(node)
+        try:
+            stripped = data.strip()
+            if stripped:
+                node = Node(data=stripped)
+                self.stack[-1].add_child(node)
+        except Exception as e:
+            self.errors.append(f"Error processing data: {e}")
 
     def handle_comment(self, data):
-        node = Node(data=data.strip(), is_comment=True)
-        self.stack[-1].add_child(node)
+        try:
+            node = Node(data=data.strip(), is_comment=True)
+            self.stack[-1].add_child(node)
+        except Exception as e:
+            self.errors.append(f"Error processing comment: {e}")
 
     def get_tree(self):
+        if len(self.stack) > 1:
+            self.errors.append("Error: Missing end tags for some elements.")
         return self.root
+
+    def get_errors(self):
+        return self.errors
+
 
 class HTMLFormatter:
     def __init__(self, indent_size=4):
@@ -68,16 +90,27 @@ class HTMLFormatter:
     def format_html(self, code):
         parser = HTMLTreeBuilder()
         try:
+            # Check for basic HTML validity
+            if "<" not in code or ">" not in code:
+                raise ValueError("Input does not appear to be valid HTML.")
+
             parser.feed(code)
             parser.close()
-        except Exception as e:
-            messagebox.showerror("Parse Error", str(e))
+        except ValueError as e:
+            messagebox.showerror("Invalid Input", str(e))
             return code
+        except Exception as e:
+            messagebox.showerror("Parse Error", f"Critical Parsing Error: {e}")
+            return code
+
+        errors = parser.get_errors()
+        if errors:
+            messagebox.showwarning("HTML Warnings", "\n".join(errors))
 
         tree = parser.get_tree()
         formatted = self.format_node(tree, 0)
-        # Strip extra whitespace and ensure newline at end
         return formatted.strip() + "\n"
+
 
     def format_node(self, node, depth):
         if node.tag == "__ROOT__":
@@ -88,57 +121,31 @@ class HTMLFormatter:
 
         indent = " " * (depth * self.indent_size)
 
-        # Handle doctype
         if node.is_doctype:
             return f"<!{node.data}>\n"
 
-        # Handle comment
         if node.is_comment:
             return indent + f"<!-- {node.data} -->\n"
 
-        # Text node
-        if node.tag is None and node.data is not None:
-            # Return text as is, with indentation
-            # Keep as a block text if it has multiple lines
+        if node.tag is None and node.data:
             lines = node.data.split('\n')
-            formatted_lines = []
-            for line in lines:
-                line = line.strip()
-                if line:
-                    formatted_lines.append(indent + line)
-            if not formatted_lines:
-                return ""
-            return "\n".join(formatted_lines) + "\n"
+            return "\n".join(indent + line.strip() for line in lines if line.strip()) + "\n"
 
-        # Element node
-        attrs_str = ""
-        if node.attrs:
-            parts = [f'{k}="{v}"' for k,v in node.attrs.items()]
-            attrs_str = " " + " ".join(parts)
+        attrs_str = " ".join(f'{k}="{v}"' for k, v in node.attrs.items())
+        start_tag = f"<{node.tag} {attrs_str}".strip() + ">"
 
-        start_tag = f"<{node.tag}{attrs_str}>"
-
-        # Void element: no children, no closing tag
         if node.tag.lower() in VOID_ELEMENTS:
             return indent + start_tag + "\n"
 
         if not node.children:
-            # Empty element
             return indent + start_tag + f"</{node.tag}>\n"
 
-        # If children exist, determine if we can inline them
-        # Check if all children are text-only
-        if all(c.tag is None and not c.is_comment and not c.is_doctype for c in node.children):
-            # Inline text children
-            inline_text = " ".join(c.data for c in node.children if c.data)
-            return indent + start_tag + inline_text + f"</{node.tag}>\n"
-        else:
-            # Block format children
-            result = indent + start_tag + "\n"
-            for c in node.children:
-                result += self.format_node(c, depth + 1)
-            result += indent + f"</{node.tag}>\n"
-            return result
+        result = indent + start_tag + "\n"
+        for child in node.children:
+            result += self.format_node(child, depth + 1)
+        result += indent + f"</{node.tag}>\n"
+        return result
+
 
 class FormatterGUI:
     def __init__(self, root):
@@ -166,6 +173,7 @@ class FormatterGUI:
         formatted_code = formatter.format_html(code)
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, formatted_code)
+
 
 if __name__ == "__main__":
     root = tk.Tk()

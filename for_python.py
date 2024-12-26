@@ -11,15 +11,27 @@ class CodeFormatter:
 
     def format_code(self, code):
         try:
-            # Parse code into AST
+            # 1) Parse code into AST (this catches SyntaxError)
             tree = ast.parse(code)
+            
+            # 2) If parsing is successful, you can optionally run the code here:
+            compiled_code = compile(tree, filename="<user-input>", mode="exec")
+            exec(compiled_code, {})
+            
+            # If the code runs successfully, format it
             self.formatted_code = ''
             self.current_indent = 0
             self.visit(tree)
             return self.formatted_code
+
         except SyntaxError as e:
             messagebox.showerror("Syntax Error", f"{e}")
             return code
+        except Exception as e:
+            # This will catch NameError, TypeError, etc. during runtime
+            messagebox.showerror("Runtime Error", str(e))
+            return code
+
 
     def visit(self, node):
         if node is None:
