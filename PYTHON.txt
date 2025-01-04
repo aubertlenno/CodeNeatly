@@ -1,0 +1,262 @@
+PYTHON
+CASE 1:
+
+
+def    is_prime   (   num   ,  cache  = {   }  ) :
+
+
+
+      if   num   in   cache  :
+
+
+
+
+            return cache  [ num   ] 
+
+
+
+      if   num    <=  1   :
+
+
+
+            cache   [   num  ]  =   False 
+
+
+
+            return   False
+
+
+
+
+      for   i    in   range(  2  , int( num  **  0.5   )  +  1  )   :
+
+
+
+
+            if   num   %  i    ==  0    :
+
+
+
+                  cache   [   num   ]  =    False
+
+
+
+
+                  return   False
+
+
+
+      cache   [ num   ]  =  True 
+
+
+
+      return True
+
+
+
+
+def   main   (    ) :
+
+
+      numbers   =   list( range (  1 ,   20  ) )
+
+
+
+      primes  =   [   n  for   n  in numbers   if    is_prime   (   n  ) ] 
+
+
+
+      print  (   "Prime numbers:"  ,  primes    )
+
+
+
+main  (   )
+
+
+
+CASE 2
+
+
+def    custom_sort   (arr   , key_func  ) :
+
+
+        for   i    in    range (   len (  arr  )   ):
+
+
+
+               for   j in  range  (i + 1 ,  len(  arr )   )   :
+
+
+
+
+                      if   key_func (  arr[  j   ]  ) <  key_func (  arr [ i  ] )    :
+
+
+
+                          arr   [  i  ]  , arr  [   j ]   = arr   [  j  ]   ,  arr[  i   ]
+
+
+
+
+        return arr
+
+
+
+
+def main(   ) :
+
+
+
+
+      data = [  "apple"   ,  "orange",   "banana"  , "grape" ]
+
+
+
+
+      sorted_data = custom_sort (   data   ,  lambda   x  :  len  ( x )   )
+
+
+
+
+      print  ( "Sorted data by length:"  ,   sorted_data    )
+
+
+
+main   (   )
+
+
+
+CASE 3
+
+
+
+def   matrix_multiply  (  A,  B   )    :
+
+
+
+        if     len( A[  0   ]  )    != len(   B )     :
+
+
+
+                raise     ValueError ( "Matrix dimensions do not match!" )
+
+
+
+        result       =     [
+
+
+            [   0    for   _    in range  ( len   (B[   0   ])    ) ] 
+
+
+               for    _   in    range(  len   (A )   )
+
+
+        ]
+
+
+
+        for   i   in   range   ( len (A )   )   :
+
+
+
+            for    j  in range  ( len   ( B[  0 ]   ) )  :
+
+
+
+
+                 for     k   in   range    ( len(  B    )   )     :
+
+
+
+                       result  [   i  ] [  j  ]  +=    A[  i  ][  k   ]   *  B[  k  ][  j  ]
+
+
+        return result
+
+
+
+
+
+def main   ( ) :
+
+
+
+     matrix1     =  [ [   1 , 2  ] ,  [   3 , 4 ] ] 
+
+
+
+     matrix2   =  [ [ 5, 6 ] ,  [   7 ,  8 ] ] 
+
+
+
+     product    =   matrix_multiply (   matrix1 ,    matrix2    )
+
+
+     print(    "Matrix Product:"  , product  )
+
+
+
+main (    )
+
+
+
+CASE 4:
+
+
+
+def   fibonacci    (   n   )    :
+
+
+    if   n    <=   0  :
+
+
+          return    [] 
+
+
+
+    elif     n    ==  1   : 
+
+
+                return   [0] 
+
+
+
+    elif    n ==  2  :
+
+               return    [0 ,   1] 
+
+
+
+
+    sequence      =    [0   ,  1]
+
+
+
+    while    len  (sequence ) <  n    :
+
+
+
+            sequence.append (sequence  [  -1   ]  +   sequence[    -2    ]   )
+
+
+
+
+    return    sequence
+
+
+
+
+def   main   (  ) :
+
+
+        count     =      10 
+
+
+        fib_sequence    =   fibonacci   (  count  )
+
+
+        print(      "Fibonacci sequence:"  ,    fib_sequence   )
+
+
+
+main  (   )

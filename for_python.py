@@ -1,6 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
 import ast
+import networkx as nx
+from graphviz import Digraph
+from PIL import Image, ImageTk
+
 
 # Formatter class
 class CodeFormatter:
@@ -8,7 +12,6 @@ class CodeFormatter:
         self.indent_size = 4
         self.formatted_code = ''
         self.current_indent = 0
-
     def format_code(self, code):
         try:
             # 1) Parse code into AST (this catches SyntaxError)
@@ -391,8 +394,30 @@ class CodeFormatter:
             ast.NotIn: 'not in',
         }
         return operators.get(type(op), '')
+    
+    def visualize_ast(self, code):
+        try:
+            tree = ast.parse(code)
+            graph = Digraph(format="png")
+            self._add_nodes(graph, tree, "root")
+            return graph
+        except SyntaxError as e:
+            messagebox.showerror("Syntax Error", f"{e}")
+            return None
+
+    def _add_nodes(self, graph, node, parent_name):
+        node_id = str(id(node))
+        label = type(node).__name__
+        graph.node(node_id, label)
+
+        if parent_name != "root":
+            graph.edge(parent_name, node_id)
+
+        for child in ast.iter_child_nodes(node):
+            self._add_nodes(graph, child, node_id)
 
 # GUI Application
+
 class FormatterGUI:
     def __init__(self, root):
         self.root = root
@@ -401,18 +426,25 @@ class FormatterGUI:
         # Input Text Widget
         self.input_label = tk.Label(root, text="Unformatted Code:")
         self.input_label.pack()
-        self.input_text = tk.Text(root, height=20, width=100)
+        self.input_text = tk.Text(root, height=10, width=80)
         self.input_text.pack()
 
-        # Format Button
+        # Buttons
         self.format_button = tk.Button(root, text="Format Code", command=self.format_code)
         self.format_button.pack()
+
+        self.visualize_button = tk.Button(root, text="Visualize LL Parsing", command=self.visualize_code)
+        self.visualize_button.pack()
 
         # Output Text Widget
         self.output_label = tk.Label(root, text="Formatted Code:")
         self.output_label.pack()
-        self.output_text = tk.Text(root, height=20, width=100)
+        self.output_text = tk.Text(root, height=10, width=80)
         self.output_text.pack()
+
+        # Visualization Canvas
+        self.canvas = tk.Canvas(root, width=600, height=400)
+        self.canvas.pack()
 
     def format_code(self):
         code = self.input_text.get("1.0", tk.END)
@@ -420,6 +452,19 @@ class FormatterGUI:
         formatted_code = formatter.format_code(code)
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, formatted_code)
+
+    def visualize_code(self):
+        code = self.input_text.get("1.0", tk.END)
+        formatter = CodeFormatter()
+        graph = formatter.visualize_ast(code)
+        if graph:
+            graph.render('ast_tree', format='png', cleanup=False)
+            img = Image.open('ast_tree.png')
+            img = img.resize((600, 400))
+            img = ImageTk.PhotoImage(img)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=img)
+            self.canvas.image = img
+
 
 # Main Execution
 if __name__ == "__main__":
