@@ -132,9 +132,6 @@ class FormatterGUI:
         self.output_text = tk.Text(root, height=10, width=80)
         self.output_text.pack()
 
-        self.canvas = tk.Canvas(root, width=600, height=400)
-        self.canvas.pack()
-
     def format_code(self):
         code = self.input_text.get("1.0", tk.END)
         formatter = HTMLFormatter()
@@ -153,8 +150,6 @@ class FormatterGUI:
         img = Image.open('html_tree.png')
         img = img.resize((600, 400))
         img = ImageTk.PhotoImage(img)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=img)
-        self.canvas.image = img
 
 if __name__ == "__main__":
     root = tk.Tk()
